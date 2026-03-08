@@ -4,6 +4,13 @@ import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { calculateTierPrice } from "@/lib/pricing";
 
+type Props = {
+  product: any;
+  onClose: () => void;
+};
+
+export default function QuickViewModal({ product, onClose }: Props) {
+
 export default function QuickViewModal({ product, onClose }) {
   const { addToCart } = useCart();
 
