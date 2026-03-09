@@ -148,7 +148,7 @@ if (!existingOrder.empty) {
         );
       }
 
-      if (quantity > stock < 0) {
+      if (quantity - stock < 0) {
         return NextResponse.json(
           { error: `Insufficient stock for ${product.name} (${sku}).` },
           { status: 400 }
