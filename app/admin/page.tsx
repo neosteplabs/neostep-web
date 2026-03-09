@@ -98,9 +98,6 @@ useEffect(() => {
   return () => unsubscribe();
 }, [auth.currentUser]);
 
-  return () => unsubscribe();
-}, []);
-
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (!user) {
