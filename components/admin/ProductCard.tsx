@@ -30,12 +30,27 @@ export default function ProductCard({
   const min =
     publicPrices.length > 0 ? Math.min(...publicPrices) : 0;
   const max =
-    publicPrices.length > 0 ? Math.max(...publicPrices) : 0;
+    publicPrices.length > 0 ? Math.max(...publicPrices) : 0;  
+const totalStock =
+  product.concentrations?.reduce(
+    (sum: number, c: any) => sum + (c.stock || 0),
+    0
+  ) || 0;
+  const reorderLevel = product.reorderLevel ?? 0;
+const reorderNeeded = reorderLevel > 0 && totalStock <= reorderLevel;
+
+let stockBorder = "border-slate-200";
+
+if (totalStock === 0) {
+  stockBorder = "border-red-400";
+} else if (totalStock <= 5) {
+  stockBorder = "border-amber-400";
+}
 
   return (
     <>
       <div
-        className={`relative bg-white rounded-xl border border-slate-200
+        className={`relative bg-white rounded-xl border ${stockBorder}
         p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5
         transition-all duration-200 text-center cursor-pointer
         ${isHidden ? "opacity-60" : ""}`}
@@ -111,12 +126,7 @@ export default function ProductCard({
         </div>
 
         {(() => {
-  const totalStock =
-    product.concentrations?.reduce(
-      (sum: number, c: any) => sum + (c.stock || 0),
-      0
-    ) || 0;
-
+  
   if (totalStock === 0) {
     return (
       <div className="text-xs text-red-600 mt-1 font-medium">
@@ -124,6 +134,14 @@ export default function ProductCard({
       </div>
     );
   }
+
+if (reorderNeeded) {
+  return (
+    <div className="text-xs text-orange-600 mt-1 font-semibold">
+      ⚠ Reorder Recommended ({totalStock})
+    </div>
+  );
+}
 
   if (totalStock <= 5) {
     return (
@@ -165,7 +183,7 @@ export default function ProductCard({
 <ProductModal
   product={product}
   onClose={() => setModalOpen(false)}
-  onSaved={() => window.location.reload()}
+  onSaved={() => setModalOpen(false)}
 />
       )}
     </>
