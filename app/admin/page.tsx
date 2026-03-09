@@ -9,6 +9,7 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  onSnapshot
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
@@ -46,6 +47,56 @@ const [showCreateShipment, setShowCreateShipment] = useState(false);
   const [sortMode, setSortMode] = useState<"display" | "alpha">("alpha");
 
 useEffect(() => {
+  if (activeView !== "inventory") return;
+
+  const unsubscribe = onSnapshot(
+    collection(db, "products"),
+    (snapshot) => {
+      const items = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+
+      setProducts(items);
+    }
+  );
+
+  return () => unsubscribe();
+}, [activeView]);
+
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    collection(db, "orders"),
+    (snapshot) => {
+      const items = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+
+      setOrders(items);
+    }
+  );
+
+  return () => unsubscribe();
+}, []);
+
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    collection(db, "supplierOrders"),
+    (snapshot) => {
+      const items = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+
+      setShipments(items);
+    }
+  );
+
+  return () => unsubscribe();
+}, []);
+
+useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (!user) {
       router.replace("/");
@@ -68,10 +119,7 @@ if (!res.ok) {
 }
 
       // Admin confirmed → load admin data
-      await fetchProducts();
-      await fetchOrders();
       await fetchUsers();
-      await fetchShipments();
 
       setLoading(false);
 
@@ -83,33 +131,6 @@ if (!res.ok) {
 
   return () => unsubscribe();
 }, [router]);
-
-  const fetchProducts = async () => {
-    const snapshot = await getDocs(collection(db, "products"));
-    setProducts(snapshot.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    })));
-  };
-
-  const fetchOrders = async () => {
-    const snapshot = await getDocs(collection(db, "orders"));
-    setOrders(snapshot.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    })));
-  };
-
-  const fetchShipments = async () => {
-  const snapshot = await getDocs(collection(db, "supplierOrders"));
-
-  setShipments(
-    snapshot.docs.map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    }))
-  );
-};
 
   const fetchUsers = async () => {
     const token = await auth.currentUser?.getIdToken();
@@ -151,8 +172,6 @@ const updateUserRole = async (
     await updateDoc(doc(db, "products", id), {
       visible: !product.visible,
     });
-
-    fetchProducts();
   };
 
   const archiveProduct = async (id: string) => {
@@ -161,7 +180,6 @@ const updateUserRole = async (
       visible: false,
     });
 
-    fetchProducts();
   };
 
   const restoreProduct = async (id: string) => {
@@ -169,7 +187,6 @@ const updateUserRole = async (
       archived: false,
     });
 
-    fetchProducts();
   };
 
   const updateOrderStatus = async (
@@ -187,8 +204,6 @@ const updateUserRole = async (
       },
       body: JSON.stringify({ orderId, status }),
     });
-
-    await fetchOrders();
   };
 
 const deleteShipment = async (shipmentId: string) => {
@@ -203,7 +218,6 @@ const deleteShipment = async (shipmentId: string) => {
 
   await deleteDoc(doc(db, "supplierOrders", shipmentId));
   
-  await fetchShipments();
 };
 const receiveShipment = async (shipmentId: string) => {
 
@@ -219,8 +233,6 @@ const receiveShipment = async (shipmentId: string) => {
     body: JSON.stringify({ shipmentId })
   });
 
-  await fetchShipments();
-  await fetchProducts();
 };
 
   const activeProducts = products.filter((p) => !p.archived);
@@ -605,19 +617,18 @@ const receiveShipment = async (shipmentId: string) => {
         />
       )}
 
-      {showAddModal && (
-        <AddProductModal
-          onClose={() => {
-            setShowAddModal(false);
-            fetchProducts();
-          }}
-        />
-      )}
+{showAddModal && (
+  <AddProductModal
+    onClose={() => {
+      setShowAddModal(false);
+    }}
+  />
+)}
       {showCreateShipment && (
   <CreateShipmentModal
     products={products}
     onClose={() => setShowCreateShipment(false)}
-    onCreated={fetchShipments}
+    onCreated={() => {}}
   />
 )}
     </div>
