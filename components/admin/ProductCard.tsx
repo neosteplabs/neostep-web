@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { productImage } from "@/lib/productImage";
 import ProductModal from "./ProductModal";
 
 type Props = {
@@ -22,9 +23,9 @@ export default function ProductCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   
-  const [imgSrc, setImgSrc] = useState(
-  `/admin/products/catalog/${product.id}.png`
-  );
+const [imgSrc, setImgSrc] = useState(
+  `/products/catalog/${product.id.toLowerCase()}.png`
+);
   const isHidden = product.visible === false;
 
   const publicPrices =
@@ -112,7 +113,7 @@ if (totalStock === 0) {
     fill
     className="object-contain p-3"
     sizes="(max-width: 768px) 100vw, 300px"
-    onError={() => setImgSrc("/admin/products/catalog/default.png")}
+    onError={() => setImgSrc("/products/catalog/default.png")}
   />
 </div>
 
