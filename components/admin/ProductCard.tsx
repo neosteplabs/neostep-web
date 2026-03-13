@@ -23,7 +23,7 @@ export default function ProductCard({
   const [modalOpen, setModalOpen] = useState(false);
   
   const [imgSrc, setImgSrc] = useState(
-  `/admin/products/${product.id}.png`
+  `/admin/products/catalog/${product.id}.png`
   );
   const isHidden = product.visible === false;
 
@@ -112,7 +112,7 @@ if (totalStock === 0) {
     fill
     className="object-contain p-3"
     sizes="(max-width: 768px) 100vw, 300px"
-    onError={() => setImgSrc("/admin/products/default.png")}
+    onError={() => setImgSrc("/admin/products/catalog/default.png")}
   />
 </div>
 

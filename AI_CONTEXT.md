@@ -41,7 +41,7 @@ Admin verification happens server-side.
 
 # Product Structure
 
-products/{productId}
+products/catalog/{productId}
 
 name
 visible

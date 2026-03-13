@@ -48,7 +48,7 @@ Cart items are validated during checkout against live product data.
 
 Collection:
 
-products/{productId}
+products/catalog/{productId}
 
 Fields:
 

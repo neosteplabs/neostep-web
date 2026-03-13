@@ -117,7 +117,7 @@ skuSet.add(sku);
       await setDoc(docRef, {
         name,
         code,
-        image: `/admin/products/${slug}.png`,
+        image: `/admin/products/catalog/${slug}.png`,
         displayOrder: Date.now(),
         visible,
         archived: false,
