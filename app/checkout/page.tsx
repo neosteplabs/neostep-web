@@ -35,15 +35,15 @@ const estimatedTotal = totalPrice + shippingCost;
     setError("");
 
     try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          uid: user.uid,
-        }),
-      });
+      const token = await user.getIdToken();
+
+const res = await fetch("/api/checkout", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`
+  }
+});
 
       const data = await res.json();
 

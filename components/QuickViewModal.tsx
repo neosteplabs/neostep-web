@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { calculateTierPrice } from "@/lib/pricing";
@@ -62,14 +63,14 @@ animate-[modalIn_.22s_cubic-bezier(.16,1,.3,1)_forwards]
           ✕
         </button>
 
-        {/* PRODUCT IMAGE */}
-        <div className="flex items-center justify-center">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full max-h-[240px] md:max-h-[380px] object-contain mx-auto"
-          />
-        </div>
+{/* PRODUCT IMAGE */}
+<div className="flex items-center justify-center">
+  <img
+    src={product.images?.public}
+    alt={product.name}
+    className="max-h-[320px] object-contain mx-auto"
+  />
+</div>
 
         {/* PRODUCT INFO */}
         <div>

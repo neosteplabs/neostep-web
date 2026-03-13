@@ -21,7 +21,12 @@ import CreateShipmentModal from "@/components/admin/CreateShipmentModal";
 
 type View =
   | "dashboard"
-  | "inventory"
+  | "inventory_weightloss"
+  | "inventory_recovery"
+  | "inventory_nootropic"
+  | "inventory_growth"
+  | "inventory_research"
+  | "inventory_tanning"
   | "trash"
   | "orders"
   | "users"
@@ -47,8 +52,6 @@ const [showCreateShipment, setShowCreateShipment] = useState(false);
   const [sortMode, setSortMode] = useState<"display" | "alpha">("alpha");
 
 useEffect(() => {
-  if (activeView !== "inventory") return;
-
   const unsubscribe = onSnapshot(
     collection(db, "products"),
     (snapshot) => {
@@ -62,7 +65,7 @@ useEffect(() => {
   );
 
   return () => unsubscribe();
-}, [activeView]);
+}, []);
 
 useEffect(() => {
   const unsubscribe = onSnapshot(
@@ -241,11 +244,64 @@ const receiveShipment = async (shipmentId: string) => {
   const trashedProducts = products.filter((p) => p.archived === true);
 
   const sortedProducts = [...activeProducts].sort((a, b) => {
+  const sortedProducts = [...activeProducts].sort((a, b) => {
+  if (sortMode === "alpha") {
+    return (a.name || "").localeCompare(b.name || "");
+  }
+  return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
+});
     if (sortMode === "alpha") {
       return (a.name || "").localeCompare(b.name || "");
     }
     return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
   });
+
+const categoryCounts = {
+
+  weightloss: products.filter(p =>
+    p.category?.toLowerCase().includes("weight")
+  ).length,
+
+  recovery: products.filter(p =>
+    p.category?.toLowerCase().includes("recovery")
+  ).length,
+
+  nootropic: products.filter(p =>
+    p.category?.toLowerCase().includes("nootropic")
+  ).length,
+
+  growth: products.filter(p =>
+    p.category?.toLowerCase().includes("growth")
+  ).length,
+
+  research: products.filter(p =>
+    p.category?.toLowerCase().includes("research")
+  ).length,
+
+  tanning: products.filter(p =>
+    p.category?.toLowerCase().includes("tanning")
+  ).length,
+};
+
+const inventoryTitles: Record<string, string> = {
+  inventory_weightloss: "Weight Loss Inventory",
+  inventory_recovery: "Recovery Inventory",
+  inventory_nootropic: "Nootropic Inventory",
+  inventory_growth: "Growth Hormone Inventory",
+  inventory_research: "Research Compounds Inventory",
+  inventory_tanning: "Tanning Inventory",
+};
+
+const currentCategoryCount = (() => {
+  if (activeView === "inventory_weightloss") return categoryCounts.weightloss;
+  if (activeView === "inventory_recovery") return categoryCounts.recovery;
+  if (activeView === "inventory_nootropic") return categoryCounts.nootropic;
+  if (activeView === "inventory_growth") return categoryCounts.growth;
+  if (activeView === "inventory_research") return categoryCounts.research;
+  if (activeView === "inventory_tanning") return categoryCounts.tanning;
+
+  return products.length;
+})();
 
   const filteredOrders =
     orderFilter === "all"
@@ -267,6 +323,7 @@ const receiveShipment = async (shipmentId: string) => {
           activeView={activeView}
           setActiveView={setActiveView}
           trashCount={trashedProducts.length}
+          counts={categoryCounts}
         />
       </div>
 
@@ -303,47 +360,74 @@ const receiveShipment = async (shipmentId: string) => {
           </div>
         )}
 
-        {/* INVENTORY */}
-        {activeView === "inventory" && (
-          <div className="max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <h1 className="text-xl font-semibold text-white">
-                Product Inventory
-              </h1>
+{/* INVENTORY CATEGORIES */}
+{activeView.startsWith("inventory") && (
+  <div className="max-w-6xl mx-auto">
 
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-md transition"
-                >
-                  + Add Product
-                </button>
+    <div className="flex justify-between items-center mb-8">
+<h1 className="text-xl font-semibold text-white">
+  {inventoryTitles[activeView] || "Product Inventory"} ({currentCategoryCount})
+</h1>
 
-                <select
-                  value={sortMode}
-                  onChange={(e) =>
-                    setSortMode(e.target.value as "display" | "alpha")
-                  }
-                  className="bg-white border border-slate-300 rounded-md px-3 py-1 text-sm"
-                >
-                  <option value="alpha">Alphabetical (A–Z)</option>
-                  <option value="display">Display Order</option>
-                </select>
-              </div>
-            </div>
+      <div className="flex gap-4">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-md transition"
+        >
+          + Add Product
+        </button>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {sortedProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onToggleVisibility={toggleVisibility}
-                  onArchive={archiveProduct}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <select
+          value={sortMode}
+          onChange={(e) =>
+            setSortMode(e.target.value as "display" | "alpha")
+          }
+          className="bg-white border border-slate-300 rounded-md px-3 py-1 text-sm"
+        >
+          <option value="alpha">Alphabetical (A–Z)</option>
+          <option value="display">Display Order</option>
+        </select>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {sortedProducts
+ .filter((product) => {
+
+  const cat = (product.category || "").toLowerCase();
+
+  if (activeView === "inventory_weightloss")
+    return cat.includes("weight");
+
+  if (activeView === "inventory_recovery")
+    return cat.includes("recovery");
+
+  if (activeView === "inventory_nootropic")
+    return cat.includes("nootropic");
+
+  if (activeView === "inventory_growth")
+  return cat.includes("growth");
+
+  if (activeView === "inventory_research")
+  return cat.includes("research");
+
+  if (activeView === "inventory_tanning")
+  return cat.includes("tanning");
+
+  return true;
+})
+        .map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onToggleVisibility={toggleVisibility}
+            onArchive={archiveProduct}
+          />
+        ))}
+    </div>
+
+  </div>
+)}
 
         {/* TRASH */}
         {activeView === "trash" && (

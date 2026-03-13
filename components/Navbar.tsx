@@ -34,7 +34,7 @@ export default function Navbar() {
 
           <Link href="/catalog">
             <img
-              src="/assets/logo/neostep-logo-header.jpg"
+              src="/products/catalog/logo/neostep-logo-header.jpg"
               className="h-[40px] object-contain"
               alt="NeoStep Logo"
             />

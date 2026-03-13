@@ -29,16 +29,25 @@ function calculateTierPrice(
   return publicPrice;
 }
 
+import { adminAuth } from "@/lib/firebaseAdmin";
+
 export async function POST(req: Request) {
   try {
-    const { uid } = await req.json();
 
-    if (!uid) {
+    const authHeader = req.headers.get("authorization");
+
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
-        { error: "Missing UID" },
-        { status: 400 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
+
+    const idToken = authHeader.split("Bearer ")[1];
+
+    const decoded = await adminAuth.verifyIdToken(idToken);
+
+    const uid = decoded.uid;
 // Prevent duplicate pending orders
 const existingOrder = await adminDb
   .collection("orders")

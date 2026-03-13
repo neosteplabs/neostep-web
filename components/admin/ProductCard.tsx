@@ -21,7 +21,10 @@ export default function ProductCard({
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-
+  
+  const [imgSrc, setImgSrc] = useState(
+  `/admin/products/${product.id}.png`
+  );
   const isHidden = product.visible === false;
 
   const publicPrices =
@@ -49,12 +52,13 @@ if (totalStock === 0) {
   return (
     <>
       <div
-        className={`relative bg-white rounded-xl border ${stockBorder}
-        p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5
-        transition-all duration-200 text-center cursor-pointer
-        ${isHidden ? "opacity-60" : ""}`}
-        onClick={() => !isTrash && setModalOpen(true)}
-      >
+  onClick={() => setModalOpen(true)}
+  className={`relative bg-white rounded-xl border ${stockBorder}
+  shadow-sm hover:shadow-md hover:-translate-y-0.5
+  transition-all duration-200 text-center cursor-pointer
+  overflow-hidden
+  ${isHidden ? "opacity-60" : ""}`}
+>
         {/* Three Dot Menu */}
         {!isTrash && (
           <div className="absolute top-3 right-3">
@@ -97,19 +101,23 @@ if (totalStock === 0) {
           </button>
         )}
 
-        {/* Product Image */}
-        <div className="relative w-[90px] h-[90px] mx-auto mb-4">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-contain"
-            sizes="90px"
-          />
-        </div>
+{/* Product Image */}
+<div
+  onClick={() => setModalOpen(true)}
+  className="relative w-full h-40 mb-3 flex items-center justify-center overflow-hidden"
+>
+  <Image
+    src={imgSrc}
+    alt={product.name}
+    fill
+    className="object-contain p-3"
+    sizes="(max-width: 768px) 100vw, 300px"
+    onError={() => setImgSrc("/admin/products/default.png")}
+  />
+</div>
 
         {/* Name */}
-        <div className="font-semibold text-slate-800 text-sm mb-1">
+        <div className="p-6 pt-2">
           {product.name}
         </div>
 
@@ -121,7 +129,7 @@ if (totalStock === 0) {
         {/* Price Range */}
         <div className="text-sm font-semibold text-slate-900">
           ${min}
-          {min !== max && ` – $${max}`}
+          {min !== max && ` – $${max.toFixed(0)}`}
         </div>
 
         <div className="mt-2 text-xs text-slate-500">

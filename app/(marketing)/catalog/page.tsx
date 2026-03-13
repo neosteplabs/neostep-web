@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import QuickViewModal from "@/components/QuickViewModal";
 import { useEffect, useState } from "react";
 import {
@@ -30,7 +31,10 @@ type Concentration = {
 type Product = {
   id: string;
   name: string;
-  image: string;
+  images: {
+    admin: string;
+    public: string;
+  };
   visible: boolean;
   displayOrder: number;
   concentrations: Concentration[];
@@ -83,11 +87,11 @@ function CatalogContent() {
         setUserTier(tier);
 
         // 2️⃣ Fetch products after tier
-        const q = query(
-          collection(db, "products"),
-          where("visible", "==", true),
-          orderBy("displayOrder", "asc")
-        );
+const q = query(
+  collection(db, "products"),
+  where("visible", "==", true),
+  orderBy("name", "asc")
+);
 
         const snapshot = await getDocs(q);
 
@@ -118,7 +122,7 @@ function CatalogContent() {
         </h1>
       </div>
 
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {products.map((product) => (
   <ProductCard
     key={product.id}
@@ -169,19 +173,26 @@ const selectedConcentration =
   onClick={onQuickView}
 className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer max-w-[320px] mx-auto"
 >
-{product.image && (
-  <div className="flex items-center justify-center mb-4">
-    <img
-      src={product.image}
-      alt={product.name}
-      className="h-[170px] object-contain"
-    />
-  </div>
+{product.images?.public && (
+<div className="flex justify-center mb-4">
+  <Image
+    src={product.images.public}
+    alt={product.name}
+    width={180}
+    height={180}
+    className="object-contain"
+    loading="eager"
+    unoptimized
+  />
+</div>
 )}
 
       <h3 className="text-lg font-medium mb-2">
         {product.name}
       </h3>
+      <p className="text-xs text-slate-500 mb-2">
+      {product.concentrations.map((c) => c.label).join(" • ")}
+      </p>
       <p className="text-xs text-green-600 font-medium mb-2">
       Verified Research Compound • COA Available
       </p>
