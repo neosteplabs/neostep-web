@@ -5,12 +5,19 @@ import { auth } from "@/lib/firebase";
 
 export default function CreateShipmentModal({ products, onClose, onCreated }: any) {
 
-  const [supplierName, setSupplierName] = useState("");
-  const [supplierCompany, setSupplierCompany] = useState("");
+const [supplierName, setSupplierName] = useState("");
+const [supplierCompany, setSupplierCompany] = useState("");
+const [productCost, setProductCost] = useState(0);
+const [shippingCost, setShippingCost] = useState(0);
+const [paymentFees, setPaymentFees] = useState(0);
+const [otherFees, setOtherFees] = useState(0);
 
-  const [orderDate, setOrderDate] = useState(
-    new Date().toISOString().slice(0,16)
-  );
+const [trackingNumber, setTrackingNumber] = useState("");
+const [carrier, setCarrier] = useState("FedEx");
+
+const [orderDate, setOrderDate] = useState(
+  new Date().toISOString().slice(0,16)
+);
 
 const [items, setItems] = useState([
   {
@@ -59,12 +66,27 @@ if (items.some(i => !i.productId || !i.sku)) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({
-        supplierName,
-        supplierCompany,
-        orderDate: new Date(orderDate),
-        items: formattedItems
-      })
+body: JSON.stringify({
+  supplierName,
+  supplierCompany,
+  orderDate,
+  trackingNumber,
+  carrier,
+
+  costs: {
+    productCost,
+    shippingCost,
+    paymentFees,
+    otherFees,
+    total:
+      productCost +
+      shippingCost +
+      paymentFees +
+      otherFees
+  },
+
+  items
+})
     });
 
 const data = await res.json();
@@ -77,9 +99,9 @@ onClose();
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/40 backdrop-blur-sm pt-24 pb-10">
 
-      <div className="bg-white rounded-xl p-6 w-[500px] space-y-5">
+      <div className="bg-white rounded-xl p-6 w-full max-w-[640px] max-h-[90vh] overflow-y-auto">
 
         <h2 className="text-lg font-semibold">Create Shipment</h2>
 
@@ -108,17 +130,42 @@ onClose();
 
 </div>
 
-        {/* Order Date */}
-        <div>
-          <label className="text-sm">Order Date</label>
+{/* Order Date */}
+<div>
+  <label className="text-sm">Order Date</label>
 
-          <input
-            type="datetime-local"
-            value={orderDate}
-            onChange={(e)=>setOrderDate(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
+  <input
+    type="datetime-local"
+    value={orderDate}
+    onChange={(e)=>setOrderDate(e.target.value)}
+    className="w-full border rounded px-3 py-2"
+  />
+</div>
+
+{/* Tracking Info */}
+<div className="grid grid-cols-2 gap-3">
+
+  <div>
+    <label className="text-sm">Tracking Number</label>
+
+    <input
+      value={trackingNumber}
+      onChange={(e)=>setTrackingNumber(e.target.value)}
+      className="w-full border rounded px-3 py-2"
+    />
+  </div>
+
+  <div>
+    <label className="text-sm">Carrier</label>
+
+    <input
+      value={carrier}
+      onChange={(e)=>setCarrier(e.target.value)}
+      className="w-full border rounded px-3 py-2"
+    />
+  </div>
+
+</div>
 
         {/* ITEMS */}
         <div className="space-y-4">
@@ -243,6 +290,60 @@ onClose();
               </div>
             );
           })}
+
+<div className="mt-6 border-t pt-4">
+  <h3 className="text-sm font-semibold mb-3">Shipment Costs</h3>
+
+  <div className="grid grid-cols-2 gap-3">
+
+    <div>
+      <label className="text-xs text-slate-500">Product Cost</label>
+      <input
+        type="number"
+        value={productCost}
+        onChange={(e)=>setProductCost(Number(e.target.value))}
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+
+    <div>
+      <label className="text-xs text-slate-500">Shipping</label>
+      <input
+        type="number"
+        value={shippingCost}
+        onChange={(e)=>setShippingCost(Number(e.target.value))}
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+
+    <div>
+      <label className="text-xs text-slate-500">Payment Fees</label>
+      <input
+        type="number"
+        value={paymentFees}
+        onChange={(e)=>setPaymentFees(Number(e.target.value))}
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+
+    <div>
+      <label className="text-xs text-slate-500">Other Fees</label>
+      <input
+        type="number"
+        value={otherFees}
+        onChange={(e)=>setOtherFees(Number(e.target.value))}
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+
+  </div>
+
+  <div className="mt-3 text-sm font-semibold">
+    Total Cost: $
+    {(productCost + shippingCost + paymentFees + otherFees).toFixed(2)}
+  </div>
+
+</div>
 
           {/* ADD PRODUCT BUTTON */}
           <button

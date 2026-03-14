@@ -1,28 +1,44 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { getAuth } from "firebase-admin/auth";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
   try {
-    const token = req.headers.get("authorization")?.split("Bearer ")[1];
+
+    // Extract auth token
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
 
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Verify Firebase token
     const decoded = await getAuth().verifyIdToken(token);
 
     if (!decoded.admin) {
       return NextResponse.json({ error: "Not admin" }, { status: 403 });
     }
 
-    const { shipmentId } = await req.json();
+    // Parse request body
+    const { shipmentId, receivedAt } = await req.json();
+
+    if (!shipmentId) {
+      return NextResponse.json(
+        { error: "shipmentId required" },
+        { status: 400 }
+      );
+    }
 
     const shipmentRef = adminDb.collection("supplierOrders").doc(shipmentId);
     const shipmentSnap = await shipmentRef.get();
 
     if (!shipmentSnap.exists) {
-      return NextResponse.json({ error: "Shipment not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Shipment not found" },
+        { status: 404 }
+      );
     }
 
     const shipment = shipmentSnap.data();
@@ -31,7 +47,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Already received" });
     }
 
-    const items = shipment?.items || [];
+    const items = shipment?.products || [];
+
+    const batch = adminDb.batch();
 
     for (const item of items) {
 
@@ -62,11 +80,13 @@ export async function POST(req: Request) {
         return c;
       });
 
-      await productRef.update({
+      batch.update(productRef, {
         concentrations: updatedConcentrations
       });
 
-      await adminDb.collection("inventoryLogs").add({
+      const logRef = adminDb.collection("inventoryLogs").doc();
+
+      batch.set(logRef, {
         type: "shipment",
         sku: item.sku,
         productId: item.productId,
@@ -75,25 +95,30 @@ export async function POST(req: Request) {
         newStock,
         referenceType: "shipment",
         referenceId: shipmentId,
-        createdAt: new Date()
+        createdAt: FieldValue.serverTimestamp()
       });
 
     }
 
-    await shipmentRef.update({
+    batch.update(shipmentRef, {
       status: "received",
-      receivedAt: new Date()
+      receivedAt: receivedAt
+        ? new Date(receivedAt)
+        : FieldValue.serverTimestamp()
     });
+
+    await batch.commit();
 
     return NextResponse.json({ success: true });
 
   } catch (error) {
 
-    console.error(error);
+    console.error("Shipment processing error:", error);
 
     return NextResponse.json(
       { error: "Shipment processing failed" },
       { status: 500 }
     );
+
   }
 }

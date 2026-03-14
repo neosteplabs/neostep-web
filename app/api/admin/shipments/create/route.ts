@@ -18,18 +18,23 @@ export async function POST(req: Request) {
 
   const data = await req.json();
 
-  await adminDb.collection("supplierOrders").add({
-    supplierName: data.supplierName,
-    supplierCompany: data.supplierCompany,
+await adminDb.collection("supplierOrders").add({
+  supplierName: data.supplierName,
+  supplierCompany: data.supplierCompany,
+  orderDate: new Date(data.orderDate),
 
-    orderDate: new Date(data.orderDate),
-    status: "ordered",
+  trackingNumber: data.trackingNumber || "",
+  carrier: data.carrier || "",
+  trackingUrl: data.trackingUrl || "",
 
-    createdAt: new Date(),
+  costs: data.costs || {},
 
-    // IMPORTANT: save the full items array
-    items: data.items || []
-  });
+  status: "ordered",
+
+  createdAt: new Date(),
+
+  items: data.items || []
+});
 
   return NextResponse.json({ success: true });
 }

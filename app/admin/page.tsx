@@ -1,5 +1,11 @@
 "use client";
 
+import DashboardPanel from "@/components/admin/panels/DashboardPanel";
+import InventoryPanel from "@/components/admin/panels/InventoryPanel";
+import OrdersPanel from "@/components/admin/panels/OrdersPanel";
+import ShipmentsPanel from "@/components/admin/panels/ShipmentsPanel";
+import UsersPanel from "@/components/admin/panels/UsersPanel";
+
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -40,10 +46,16 @@ export default function AdminPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [expandedShipments, setExpandedShipments] = useState<string[]>([]);
+  const [incomingExpanded, setIncomingExpanded] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [shipments, setShipments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-const [showCreateShipment, setShowCreateShipment] = useState(false);
+  const [showCreateShipment, setShowCreateShipment] = useState(false);
+
+  const [receiveShipmentId, setReceiveShipmentId] = useState<string | null>(null);
+  const [receiveDate, setReceiveDate] = useState("");
+
+  const [shipmentSearch, setShipmentSearch] = useState("");
 
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -84,22 +96,24 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
-  if (!auth.currentUser) return;
 
   const unsubscribe = onSnapshot(
     collection(db, "supplierOrders"),
     (snapshot) => {
+
       const items = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
       }));
 
       setShipments(items);
+
     }
   );
 
   return () => unsubscribe();
-}, [auth.currentUser]);
+
+}, []);
 
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -224,7 +238,10 @@ const deleteShipment = async (shipmentId: string) => {
   await deleteDoc(doc(db, "supplierOrders", shipmentId));
   
 };
-const receiveShipment = async (shipmentId: string) => {
+const receiveShipment = async (
+  shipmentId: string,
+  receivedAt?: string
+) => {
 
   const token = await auth.currentUser?.getIdToken();
   if (!token) return;
@@ -235,26 +252,23 @@ const receiveShipment = async (shipmentId: string) => {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ shipmentId })
+    body: JSON.stringify({
+      shipmentId,
+      receivedAt
+    })
   });
 
 };
 
-  const activeProducts = products.filter((p) => !p.archived);
-  const trashedProducts = products.filter((p) => p.archived === true);
+const activeProducts = products.filter((p) => !p.archived);
+const trashedProducts = products.filter((p) => p.archived === true);
 
-  const sortedProducts = [...activeProducts].sort((a, b) => {
-  const sortedProducts = [...activeProducts].sort((a, b) => {
+const sortedProducts = [...activeProducts].sort((a, b) => {
   if (sortMode === "alpha") {
     return (a.name || "").localeCompare(b.name || "");
   }
   return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
 });
-    if (sortMode === "alpha") {
-      return (a.name || "").localeCompare(b.name || "");
-    }
-    return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
-  });
 
 const categoryCounts = {
 
@@ -315,7 +329,6 @@ const currentCategoryCount = (() => {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-slate-900 pt-20 flex">
       <div className="w-[240px] border-r border-slate-800 bg-slate-900">
@@ -330,103 +343,26 @@ const currentCategoryCount = (() => {
       <div className="flex-1 overflow-y-auto px-10 py-10">
 
         {/* DASHBOARD */}
-        {activeView === "dashboard" && (
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-2xl font-semibold text-white mb-8">
-              Dashboard
-            </h1>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-              <StatCard label="Total Orders" value={orders.length} />
-              <StatCard
-                label="Pending"
-                value={orders.filter(o => o.status === "pending").length}
-              />
-              <StatCard
-                label="Completed"
-                value={orders.filter(o => o.status === "completed").length}
-              />
-              <StatCard
-                label="Revenue"
-                value={
-                  "$" +
-                  orders.reduce(
-                    (sum, o) => sum + (o.financials?.total || 0),
-                    0
-                  )
-                }
-              />
-            </div>
-          </div>
-        )}
+{activeView === "dashboard" && (
+  <DashboardPanel orders={orders} />
+)}
 
 {/* INVENTORY CATEGORIES */}
 {activeView.startsWith("inventory") && (
-  <div className="max-w-6xl mx-auto">
 
-    <div className="flex justify-between items-center mb-8">
-<h1 className="text-xl font-semibold text-white">
-  {inventoryTitles[activeView] || "Product Inventory"} ({currentCategoryCount})
-</h1>
+<InventoryPanel
+products={products}
+sortedProducts={sortedProducts}
+activeView={activeView}
+inventoryTitles={inventoryTitles}
+currentCategoryCount={currentCategoryCount}
+setShowAddModal={setShowAddModal}
+sortMode={sortMode}
+setSortMode={setSortMode}
+toggleVisibility={toggleVisibility}
+archiveProduct={archiveProduct}
+/>
 
-      <div className="flex gap-4">
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-md transition"
-        >
-          + Add Product
-        </button>
-
-        <select
-          value={sortMode}
-          onChange={(e) =>
-            setSortMode(e.target.value as "display" | "alpha")
-          }
-          className="bg-white border border-slate-300 rounded-md px-3 py-1 text-sm"
-        >
-          <option value="alpha">Alphabetical (A–Z)</option>
-          <option value="display">Display Order</option>
-        </select>
-      </div>
-    </div>
-
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {sortedProducts
- .filter((product) => {
-
-  const cat = (product.category || "").toLowerCase();
-
-  if (activeView === "inventory_weightloss")
-    return cat.includes("weight");
-
-  if (activeView === "inventory_recovery")
-    return cat.includes("recovery");
-
-  if (activeView === "inventory_nootropic")
-    return cat.includes("nootropic");
-
-  if (activeView === "inventory_growth")
-  return cat.includes("growth");
-
-  if (activeView === "inventory_research")
-  return cat.includes("research");
-
-  if (activeView === "inventory_tanning")
-  return cat.includes("tanning");
-
-  return true;
-})
-        .map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onToggleVisibility={toggleVisibility}
-            onArchive={archiveProduct}
-          />
-        ))}
-    </div>
-
-  </div>
 )}
 
         {/* TRASH */}
@@ -457,242 +393,41 @@ const currentCategoryCount = (() => {
 
         {/* ORDERS */}
 {activeView === "orders" && (
-  <div className="max-w-6xl mx-auto">
-    <div className="flex justify-between items-center mb-8">
-      <h1 className="text-xl font-semibold text-white">
-        Orders
-      </h1>
-
-      <select
-        value={orderFilter}
-        onChange={(e) =>
-          setOrderFilter(
-            e.target.value as "all" | OrderStatus
-          )
-        }
-        className="bg-white border border-slate-300 rounded-md px-3 py-1 text-sm"
-      >
-        <option value="all">All</option>
-        <option value="pending">Pending</option>
-        <option value="completed">Completed</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
-    </div>
-
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-
-      <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr] px-6 py-3 text-xs uppercase text-slate-400 border-b">
-        <div>Order</div>
-        <div>Date</div>
-        <div>Total</div>
-        <div>Status</div>
-        <div>Inventory</div>
-      </div>
-
-      {filteredOrders.map((order) => (
-        <div
-          key={order.id}
-          onClick={() => setSelectedOrder(order)}
-          className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center px-6 py-4 border-b text-sm hover:bg-slate-50 cursor-pointer"
-        >
-          <div className="truncate font-medium">
-            {order.orderNumber || order.id}
-          </div>
-
-          <div>
-            {order.createdAt?.toDate
-              ? order.createdAt.toDate().toLocaleDateString()
-              : "—"}
-          </div>
-
-          <div>${order.financials?.total || 0}</div>
-
-          <div
-  onClick={(e) => e.stopPropagation()}
-  className="flex items-center gap-2"
->
-            <select
-              value={order.status || "pending"}
-              onChange={(e) =>
-                updateOrderStatus(
-                  order.id,
-                  e.target.value as OrderStatus
-                )
-              }
-              className="h-9 px-4 rounded-lg border border-slate-200 bg-white shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-            >
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          <div>
-            {order.inventoryAdjusted ? "Adjusted" : "Pending"}
-          </div>
-        </div>
-      ))}
-
-    </div>
-  </div>
+<OrdersPanel
+orders={orders}
+orderFilter={orderFilter}
+setOrderFilter={setOrderFilter}
+setSelectedOrder={setSelectedOrder}
+updateOrderStatus={updateOrderStatus}
+/>
 )}
 
 {/* SHIPMENTS */}
 {activeView === "shipments" && (
-  <div className="max-w-6xl mx-auto">
-
-    <div className="flex justify-between items-center mb-8">
-      <h1 className="text-xl font-semibold text-white">
-        Supplier Shipments
-      </h1>
-
-      <button
-        onClick={() => setShowCreateShipment(true)}
-        className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
-      >
-        + Create Shipment
-      </button>
-    </div>
-
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-
-<div className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr] px-6 py-3 text-xs uppercase text-slate-400 border-b">
-  <div>Supplier</div>
-  <div>Company</div>
-  <div>Ordered</div>
-  <div>Items</div>
-  <div>Status</div>
-</div>
-
-{shipments.map((shipment) => (
-  <div key={shipment.id}>
-
-    <div
-      onClick={() =>
-        setExpandedShipments((prev) =>
-          prev.includes(shipment.id)
-            ? prev.filter((x) => x !== shipment.id)
-            : [...prev, shipment.id]
-        )
-      }
-      className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr] items-center px-6 py-4 border-b text-sm cursor-pointer hover:bg-slate-50"
-    >
-      <div className="font-medium">
-        {shipment.supplierName}
-      </div>
-
-      <div>
-        {shipment.supplierCompany || "—"}
-      </div>
-
-      <div>
-        {shipment.orderDate?.toDate
-          ? shipment.orderDate.toDate().toLocaleDateString()
-          : "—"}
-      </div>
-
-<div className="text-xs">
-  <div>
-    {shipment.items?.reduce((sum:any,i:any)=>sum+(i.boxesOrdered||0),0)||0} boxes
-  </div>
-
-  <div className="text-slate-400">
-    {shipment.items?.reduce((sum:any,i:any)=>sum+(i.totalVials||0),0)||0} vials
-  </div>
-</div>
-
-      <div
-  onClick={(e) => e.stopPropagation()}
-  className="flex items-center gap-2"
->
-        {shipment.status !== "received" ? (
-          <button
-            onClick={() => receiveShipment(shipment.id)}
-            className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded"
-          >
-            Receive
-          </button>
-        ) : (
-          <span className="text-slate-500">{shipment.status}</span>
-        )}
-
-          <button
-    onClick={() => deleteShipment(shipment.id)}
-    className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded"
-  >
-    Delete
-  </button>
-      </div>
-    </div>
-
-    {expandedShipments.includes(shipment.id) && (
-<div className="bg-slate-50 px-10 py-4 border-b text-sm">
-  {shipment.items?.map((item: any, index: number) => (
-    <div
-      key={index}
-      className="grid grid-cols-2 max-w-md py-1 text-slate-700"
-    >
-      <div>{item.sku}</div>
-      <div>
-  {item.boxesOrdered || 0} box{item.boxesOrdered === 1 ? "" : "es"} → {(item.boxesOrdered || 0) * item.vialsPerBox} vials
-</div>
-    </div>
-  ))}
-</div>
+<ShipmentsPanel
+shipments={shipments}
+products={products}
+shipmentSearch={shipmentSearch}
+setShipmentSearch={setShipmentSearch}
+expandedShipments={expandedShipments}
+setExpandedShipments={setExpandedShipments}
+receiveShipment={receiveShipment}
+deleteShipment={deleteShipment}
+setShowCreateShipment={setShowCreateShipment}
+receiveShipmentId={receiveShipmentId}
+setReceiveShipmentId={setReceiveShipmentId}
+receiveDate={receiveDate}
+setReceiveDate={setReceiveDate}
+incomingExpanded={incomingExpanded}
+setIncomingExpanded={setIncomingExpanded}
+/>
 )}
-
-  </div>
-))}
-
-    </div>
-  </div>
-)}
-
         {/* USERS */}
 {activeView === "users" && (
-  <div className="max-w-6xl mx-auto">
-    <h1 className="text-2xl font-semibold text-white mb-8">
-      User Management
-    </h1>
-
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-
-      <div className="grid grid-cols-3 px-6 py-3 text-xs uppercase text-slate-400 border-b">
-        <div>Email</div>
-        <div>Tier</div>
-        <div></div>
-      </div>
-
-      {users.map((user) => (
-        <div
-          key={user.id}
-          className="grid grid-cols-3 items-center px-6 py-4 border-b text-sm"
-        >
-          <div className="truncate">{user.email}</div>
-
-          <select
-            value={user.tier || "public"}
-            onChange={(e) =>
-              updateUserRole(
-                user.id,
-                e.target.value as "public" | "vip" | "family"
-              )
-            }
-            className="h-9 px-4 rounded-lg border border-slate-200 bg-white shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-          >
-            <option value="public">Public</option>
-            <option value="vip">VIP</option>
-            <option value="family">Family</option>
-          </select>
-
-          <div className="text-xs text-slate-400">
-            UID: {user.id}
-          </div>
-        </div>
-      ))}
-
-    </div>
-  </div>
+<UsersPanel
+users={users}
+updateUserRole={updateUserRole}
+/>
 )}
       </div>
 
